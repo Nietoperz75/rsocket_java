@@ -2,6 +2,8 @@ package pl.grabla.rsocket.service;
 
 import io.rsocket.Payload;
 import io.rsocket.RSocket;
+import org.reactivestreams.Publisher;
+import pl.grabla.rsocket.dto.ChartResponseDto;
 import pl.grabla.rsocket.dto.RequestDto;
 import pl.grabla.rsocket.dto.ResponseDto;
 import pl.grabla.rsocket.util.ObjectUtil;
@@ -40,6 +42,15 @@ public class MathService implements RSocket {
                 .map(w -> new ResponseDto(requestDto.getInput(), w))
                 .delayElements(Duration.ofSeconds(1))
                 .doOnNext(System.out::println)
+                .map(ObjectUtil::toPayload);
+    }
+
+    @Override
+    public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
+        return Flux.from(payloads)
+                .map(p -> ObjectUtil.toObject(p, RequestDto.class))
+                .map(RequestDto::getInput)
+                .map(i -> new ChartResponseDto(i, (i*i)+1))
                 .map(ObjectUtil::toPayload);
     }
 }

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import pl.grabla.rsocket.dto.ChartResponseDto;
 import pl.grabla.rsocket.dto.RequestDto;
 import pl.grabla.rsocket.dto.ResponseDto;
 import pl.grabla.rsocket.util.ObjectUtil;
@@ -17,6 +18,7 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.sql.SQLOutput;
+import java.time.Duration;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class Lec01RSocketTest {
@@ -55,9 +57,24 @@ public class Lec01RSocketTest {
 
         Payload payload = ObjectUtil.toPayload(new RequestDto(12));
         Flux<ResponseDto> flux = this.rSocket.requestStream(payload)
-                .map(p-> ObjectUtil.toObject(p, ResponseDto.class)).doOnNext(System.out::println);
+                .map(p-> ObjectUtil.toObject(p, ResponseDto.class)).doOnNext(System.out::println).take(4);
         StepVerifier.create(flux)
-                .expectNextCount(10)
+                .expectNextCount(4)
+                .verifyComplete();
+    }
+
+    @Test
+    public void requestChannel(){
+        var payloadFlux = Flux.range(-10, 21)
+                .delayElements(Duration.ofMillis(500))
+                .map(i -> new RequestDto(i))
+                .map(ObjectUtil::toPayload);
+        var flux = this.rSocket.requestChannel(payloadFlux)
+                .map(p->ObjectUtil.toObject(p, ChartResponseDto.class))
+                .doOnNext(System.out::println);
+
+        StepVerifier.create(flux)
+                .expectNextCount(21)
                 .verifyComplete();
     }
 
